@@ -12,8 +12,8 @@ data Symbol = Chr Char | Start | End deriving (Eq, Show, Ord)
 -- Additionally, each non-accepting state will have an integral ID that determines equality
 -- and must be set by the caller
 data NFAState = Accept
-              | Letter Int Symbol [NFAState]
-              | Wildcard Int [NFAState]
+              | Letter Int Symbol (S.Set NFAState)
+              | Wildcard Int (S.Set NFAState)
 
 state_id :: NFAState -> Int
 state_id Accept = -1
@@ -22,8 +22,8 @@ state_id (Wildcard i _) = i
 
 instance Show NFAState where
     show Accept = "Accept"
-    show (Letter i c next) = "Letter " ++ (show i) ++ " " ++ (show c) ++ " " ++ (show . map state_id $ next)
-    show (Wildcard i next) = "Wildcard" ++ (show i) ++ " " ++ (show . map state_id $ next)
+    show (Letter i c next) = "Letter " ++ (show i) ++ " " ++ (show c) ++ " " ++ (show . S.map state_id $ next)
+    show (Wildcard i next) = "Wildcard" ++ (show i) ++ " " ++ (show . S.map state_id $ next)
 
 instance Eq NFAState where
     (==) Accept Accept = True
@@ -32,41 +32,40 @@ instance Eq NFAState where
     (==) x y = (state_id x) == (state_id y)
 
 instance Ord NFAState where
-    compare Accept Accept = EQ
-    compare Accept _ = LT
-    compare _ Accept = GT
+--    compare Accept Accept = EQ
+--    compare Accept _ = LT
+--    compare _ Accept = GT
     compare x y = compare (state_id x) (state_id y)
 
 -- Construction functions
 -- These generally take the states to move to if the subexpression matches
 -- and return the start state(s) of the subexpression
 
--- Concatenation is simply the composition operator
--- (.) :: ([NFAState] -> [NFAState]) -> ([NFAState] -> [NFAState]) -> [NFAState] -> [NFAState]
+-- Concatenation is simply the composition operator (.)
 
-letter :: Int -> Symbol -> [NFAState] -> [NFAState]
-letter i c next = return $! Letter i c next
+letter :: Int -> Symbol -> S.Set NFAState -> S.Set NFAState
+letter i c next = S.singleton $! Letter i c next
 
-wildcard :: Int -> [NFAState] -> [NFAState]
-wildcard i next = return $! Wildcard i next
+wildcard :: Int -> S.Set NFAState -> S.Set NFAState
+wildcard i next = S.singleton $! Wildcard i next
 
-zeroOrOne :: ([NFAState] -> [NFAState]) -> [NFAState] -> [NFAState]
-zeroOrOne builder next = next ++ (builder next)
+zeroOrOne :: (S.Set NFAState -> S.Set NFAState) -> S.Set NFAState -> S.Set NFAState
+zeroOrOne builder next = S.union next (builder next)
 
-zeroOrMore :: ([NFAState] -> [NFAState]) -> [NFAState] -> [NFAState]
-zeroOrMore builder next = let x = (builder next ++ x) in next ++ x
+zeroOrMore :: (S.Set NFAState -> S.Set NFAState) -> S.Set NFAState -> S.Set NFAState
+zeroOrMore builder next = let x = (builder $ S.union next x) in S.union next x
 
-fork :: [[NFAState] -> [NFAState]] -> [NFAState] -> [NFAState]
-fork paths next = join $ map ($ next) paths
+fork :: [S.Set NFAState -> S.Set NFAState] -> S.Set NFAState -> S.Set NFAState
+fork paths next = foldl' S.union S.empty (map ($ next) paths)
 
-oneOrMore :: ([NFAState] -> [NFAState]) -> [NFAState] -> [NFAState]
-oneOrMore builder next = let x = (builder (next ++ x)) in x
+oneOrMore :: (S.Set NFAState -> S.Set NFAState) -> S.Set NFAState -> S.Set NFAState
+oneOrMore builder next = let x = (builder (S.union next x)) in x
 
 -- Running an NFA
 singleStep :: Symbol -> NFAState -> S.Set NFAState
 singleStep c Accept = S.singleton Accept
-singleStep c (Letter _ c0 next) = if c == c0 then S.fromList next else S.empty
-singleStep _ (Wildcard _ next) = S.fromList next
+singleStep c (Letter _ c0 next) = if c == c0 then next else S.empty
+singleStep _ (Wildcard _ next) = next
 
 -- >>= for sets
 setBind :: (Ord a, Ord b) => S.Set a -> (a -> S.Set b) -> S.Set b

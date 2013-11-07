@@ -2,3 +2,4 @@ dist/
 Main
 *.hi
 *.o
+Main.prof
