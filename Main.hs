@@ -2,15 +2,15 @@ module Main where
 
 import System.IO
 
-import qualified Data.Set as S
+import qualified Intable as I
 
 import NFA
 
-testcase :: Int -> S.Set NFAState
+testcase :: Int -> I.Set NFAState
 testcase n = do
-    let phase1 = map (\i -> zeroOrOne $ S.singleton . Letter i (Chr 'a')) [1 .. n]
-    let phase2 = map (\i -> S.singleton . Letter i (Chr 'a')) [n+1 .. 2*n]
-    foldr (.) (id) (phase1 ++ phase2) $ S.singleton Accept
+    let phase1 = map (\i -> zeroOrOne $ I.singleton . Letter i (Chr 'a')) [1 .. n]
+    let phase2 = map (\i -> I.singleton . Letter i (Chr 'a')) [n+1 .. 2*n]
+    foldr (.) (id) (phase1 ++ phase2) $ I.singleton Accept
 
 main :: IO ()
 main = do

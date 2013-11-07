@@ -5,6 +5,7 @@ import Data.Ord
 import Data.List
 import qualified Data.Set as S
 import qualified Data.Map as M
+import qualified Intable as I
 
 data Symbol = Chr Char | Start | End deriving (Eq, Show, Ord)
 
@@ -12,18 +13,21 @@ data Symbol = Chr Char | Start | End deriving (Eq, Show, Ord)
 -- Additionally, each non-accepting state will have an integral ID that determines equality
 -- and must be set by the caller
 data NFAState = Accept
-              | Letter Int Symbol (S.Set NFAState)
-              | Wildcard Int (S.Set NFAState)
+              | Letter Int Symbol (I.Set NFAState)
+              | Wildcard Int (I.Set NFAState)
 
 state_id :: NFAState -> Int
 state_id Accept = -1
 state_id (Letter i _ _) = i
 state_id (Wildcard i _) = i
 
+instance I.Intable NFAState where
+    toInt = state_id
+
 instance Show NFAState where
     show Accept = "Accept"
-    show (Letter i c next) = "Letter " ++ (show i) ++ " " ++ (show c) ++ " " ++ (show . S.map state_id $ next)
-    show (Wildcard i next) = "Wildcard" ++ (show i) ++ " " ++ (show . S.map state_id $ next)
+    show (Letter i c next) = "Letter " ++ (show i) ++ " " ++ (show c) ++ " " ++ (show . I.map state_id $ next)
+    show (Wildcard i next) = "Wildcard" ++ (show i) ++ " " ++ (show . I.map state_id $ next)
 
 instance Eq NFAState where
     (==) Accept Accept = True
@@ -43,40 +47,36 @@ instance Ord NFAState where
 
 -- Concatenation is simply the composition operator (.)
 
-letter :: Int -> Symbol -> S.Set NFAState -> S.Set NFAState
-letter i c next = S.singleton $! Letter i c next
+letter :: Int -> Symbol -> I.Set NFAState -> I.Set NFAState
+letter i c next = I.singleton $! Letter i c next
 
-wildcard :: Int -> S.Set NFAState -> S.Set NFAState
-wildcard i next = S.singleton $! Wildcard i next
+wildcard :: Int -> I.Set NFAState -> I.Set NFAState
+wildcard i next = I.singleton $! Wildcard i next
 
-zeroOrOne :: (S.Set NFAState -> S.Set NFAState) -> S.Set NFAState -> S.Set NFAState
-zeroOrOne builder next = S.union next (builder next)
+zeroOrOne :: (I.Set NFAState -> I.Set NFAState) -> I.Set NFAState -> I.Set NFAState
+zeroOrOne builder next = I.union next (builder next)
 
-zeroOrMore :: (S.Set NFAState -> S.Set NFAState) -> S.Set NFAState -> S.Set NFAState
-zeroOrMore builder next = let x = (builder $ S.union next x) in S.union next x
+zeroOrMore :: (I.Set NFAState -> I.Set NFAState) -> I.Set NFAState -> I.Set NFAState
+zeroOrMore builder next = let x = (builder $ I.union next x) in I.union next x
 
-fork :: [S.Set NFAState -> S.Set NFAState] -> S.Set NFAState -> S.Set NFAState
-fork paths next = foldl' S.union S.empty (map ($ next) paths)
+fork :: [I.Set NFAState -> I.Set NFAState] -> I.Set NFAState -> I.Set NFAState
+fork paths next = I.unions (map ($ next) paths)
 
-oneOrMore :: (S.Set NFAState -> S.Set NFAState) -> S.Set NFAState -> S.Set NFAState
-oneOrMore builder next = let x = (builder (S.union next x)) in x
+oneOrMore :: (I.Set NFAState -> I.Set NFAState) -> I.Set NFAState -> I.Set NFAState
+oneOrMore builder next = let x = (builder (I.union next x)) in x
 
 -- Running an NFA
-singleStep :: Symbol -> NFAState -> S.Set NFAState
-singleStep c Accept = S.singleton Accept
-singleStep c (Letter _ c0 next) = if c == c0 then next else S.empty
+singleStep :: Symbol -> NFAState -> I.Set NFAState
+singleStep c Accept = I.singleton Accept
+singleStep c (Letter _ c0 next) = if c == c0 then next else I.empty
 singleStep _ (Wildcard _ next) = next
 
--- >>= for sets
-setBind :: (Ord a, Ord b) => S.Set a -> (a -> S.Set b) -> S.Set b
-setBind xs f = S.foldl' S.union S.empty (S.map f xs)
+step :: Symbol -> I.Set NFAState -> I.Set NFAState
+step c states = states `I.setBind` (singleStep c)
 
-step :: Symbol -> S.Set NFAState -> S.Set NFAState
-step c states = states `setBind` (singleStep c)
-
-runNFA :: [Symbol] -> S.Set NFAState -> S.Set NFAState
+runNFA :: [Symbol] -> I.Set NFAState -> I.Set NFAState
 runNFA [] states = states
 runNFA (c:cs) states = runNFA cs (step c states)
 
-accepted :: S.Set NFAState -> Bool
-accepted = S.member Accept
+accepted :: I.Set NFAState -> Bool
+accepted = I.member Accept
