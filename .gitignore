@@ -1,0 +1,4 @@
+dist/
+Main
+*.hi
+*.o
