@@ -1,6 +1,7 @@
 module Regex where
 
 import NFA
+import qualified CompactNFA as C
 import qualified Intable as I
 
 -- I'm going to ignore the | operator for now because it is annoying
@@ -31,22 +32,19 @@ buildNFA (t:ts) i (b:bs) lst = case t of
     LetterSet s -> buildNFA ts (i+1) ((b . lst):bs) (letters i (map Chr s))
     LetterAntiSet s -> buildNFA ts (i+1) ((b . lst):bs) (notLetters i (map Chr s))
     Wildcard -> buildNFA ts (i+1) ((b . lst):bs) (wildcard i)
-    ZeroOrOne -> buildNFA ts (i+1) (b:bs) (zeroOrOne lst)
-    ZeroOrMore -> buildNFA ts (i+1) (b:bs) (zeroOrMore lst)
-    OneOrMore -> buildNFA ts (i+1) (b:bs) (oneOrMore lst)
-    LeftParen -> buildNFA ts (i+1) (id:(b . lst):bs) id
-    RightParen -> buildNFA ts (i+1) bs (b . lst)
+    ZeroOrOne -> buildNFA ts i (b:bs) (zeroOrOne lst)
+    ZeroOrMore -> buildNFA ts i (b:bs) (zeroOrMore lst)
+    OneOrMore -> buildNFA ts i (b:bs) (oneOrMore lst)
+    LeftParen -> buildNFA ts i (id:(b . lst):bs) id
+    RightParen -> buildNFA ts i bs (b . lst)
     StartToken -> buildNFA ts (i+1) ((b . lst):bs) (letter i Start)
     EndToken -> buildNFA ts (i+1) ((b . lst):bs) (letter i End)
 
-compileRegex :: String -> I.Set NFAState
-compileRegex regex = buildNFA (tokenize regex) 0 [id] id (I.singleton Accept)
+compileRegex :: String -> C.CompactNFA
+compileRegex regex = C.compactify $! buildNFA (tokenize regex) 0 [id] id (I.singleton Accept)
 
-matchesRegex :: I.Set NFAState -> String -> Bool
-matchesRegex start s = do
-    let str = [Start] ++ (map Chr s) ++ [End]
-    let final = runNFAFromEverywhere str start
-    Accept `I.member` final
+matchesRegex :: C.CompactNFA -> String -> Bool
+matchesRegex cnfa s = let str = [Start] ++ (map Chr s) ++ [End] in C.runFromEverywhere str cnfa
 
 whitespaceSet = " \t\n\t\r"
 wordSet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"
