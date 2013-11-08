@@ -9,7 +9,7 @@ class Intable a where
 instance Intable Int where
     toInt = id
 
-data Intable a => Set a = IndirectSet (M.IntMap a) deriving (Eq, Show)
+data Set a = IndirectSet (M.IntMap a) deriving (Eq, Show)
 
 underlying_map (IndirectSet m) = m
 
@@ -22,7 +22,6 @@ notMember x (IndirectSet m) = M.notMember (toInt x) m
 isSubsetOf (IndirectSet m1) (IndirectSet m2) = M.isSubmapOf m1 m2
 isProperSubsetOf (IndirectSet m1) (IndirectSet m2) = M.isProperSubmapOf m1 m2
 
-empty :: Intable a => Set a
 empty = IndirectSet M.empty
 singleton x = IndirectSet (M.singleton (toInt x) x)
 insert x (IndirectSet m) = IndirectSet (M.insert (toInt x) x m)
@@ -47,7 +46,6 @@ deleteMax (IndirectSet m) = IndirectSet (M.deleteMax m)
 map f (IndirectSet m) = IndirectSet (M.map f m)
 fold f x (IndirectSet m) = M.fold f x m
 elems (IndirectSet m) = M.elems m
-toList :: Intable a => Set a -> [a]
 toList = elems
 fromList xs = M.fromList $ Prelude.map (\x -> (toInt x, x)) xs
 
