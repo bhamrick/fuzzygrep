@@ -34,7 +34,7 @@ buildNFA (t:ts) i (b:bs) lst = case t of
     ZeroOrOne -> buildNFA ts (i+1) (b:bs) (zeroOrOne lst)
     ZeroOrMore -> buildNFA ts (i+1) (b:bs) (zeroOrMore lst)
     OneOrMore -> buildNFA ts (i+1) (b:bs) (oneOrMore lst)
-    LeftParen -> buildNFA ts (i+1) (lst:b:bs) id
+    LeftParen -> buildNFA ts (i+1) (id:(b . lst):bs) id
     RightParen -> buildNFA ts (i+1) bs (b . lst)
     StartToken -> buildNFA ts (i+1) ((b . lst):bs) (letter i Start)
     EndToken -> buildNFA ts (i+1) ((b . lst):bs) (letter i End)
@@ -76,6 +76,7 @@ getToken (c:cs) = case c of
         'S' -> (LetterAntiSet whitespaceSet, tail cs)
         'W' -> (LetterAntiSet wordSet, tail cs)
         'D' -> (LetterAntiSet digitSet, tail cs)
+        _ -> error "Bad pattern"
     '[' -> case head cs of
         '^' -> let (s, rest) = getLetterSet (tail cs) in (LetterAntiSet s, rest)
         _ -> let (s, rest) = getLetterSet cs in (LetterSet s, rest)
@@ -99,5 +100,6 @@ getLetterSet (c:cs) = case c of
         '\\' -> ('\\' : s, rest)
         '[' -> ('[' : s, rest)
         ']' -> (']' : s, rest)
+        _ -> error "Bad pattern"
     _ -> let (s, rest) = getLetterSet cs in (c : s, rest)
     -- Todo: Things like 0-9
