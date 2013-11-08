@@ -47,6 +47,12 @@ instance Ord NFAState where
 letter :: Int -> Symbol -> I.Set NFAState -> I.Set NFAState
 letter i c next = I.singleton $! Transition i (\x -> if x == c then next else I.empty)
 
+letters :: Int -> [Symbol] -> I.Set NFAState -> I.Set NFAState
+letters i cs next = I.singleton $! Transition i (\x -> if x `S.member` (S.fromList cs) then next else I.empty)
+
+notLetters :: Int -> [Symbol] -> I.Set NFAState -> I.Set NFAState
+notLetters i cs next = I.singleton $! Transition i (\x -> if x `S.member` S.fromList cs then I.empty else next)
+
 wildcard :: Int -> I.Set NFAState -> I.Set NFAState
 wildcard i next = I.singleton $! Transition i (const next)
 
@@ -76,6 +82,13 @@ step c states = states `I.setBind` (singleStep c)
 runNFA :: [Symbol] -> I.Set NFAState -> I.Set NFAState
 runNFA [] states = states
 runNFA (c:cs) states = runNFA cs (step c states)
+
+runNFAFromEverywhere :: [Symbol] -> I.Set NFAState -> I.Set NFAState
+runNFAFromEverywhere s start = runNFAFromEverywhere_ s start start
+
+runNFAFromEverywhere_ :: [Symbol] -> I.Set NFAState -> I.Set NFAState -> I.Set NFAState
+runNFAFromEverywhere_ [] start states = states `I.union` start
+runNFAFromEverywhere_ (c:cs) start states = runNFAFromEverywhere_ cs start (step c states `I.union` start)
 
 accepted :: I.Set NFAState -> Bool
 accepted = I.member Accept
