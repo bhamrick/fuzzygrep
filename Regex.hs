@@ -37,8 +37,8 @@ buildNFA (t:ts) i (b:bs) lst = case t of
     OneOrMore -> buildNFA ts i (b:bs) (oneOrMore lst)
     LeftParen -> buildNFA ts i (id:(b . lst):bs) id
     RightParen -> buildNFA ts i bs (b . lst)
-    StartToken -> buildNFA ts (i+1) ((b . lst):bs) (letter i Start)
-    EndToken -> buildNFA ts (i+1) ((b . lst):bs) (letter i End)
+    StartToken -> buildNFA ts (i+1) ((b . lst):bs) (start i)
+    EndToken -> buildNFA ts (i+1) ((b . lst):bs) (end i)
 
 compileRegex :: String -> C.CompactNFA
 compileRegex regex = C.compactify $! buildNFA (tokenize regex) 0 [id] id (I.singleton Accept)

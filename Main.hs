@@ -5,6 +5,7 @@ import System.IO
 
 import Regex
 import CompactNFA
+import Fuzzy
 
 testcase n = (join $ replicate n "a?") ++ replicate n 'a'
 

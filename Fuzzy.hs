@@ -10,15 +10,16 @@ fuzz :: Int -> CompactNFA -> CompactNFA
 fuzz k cnfa = CompactNFA
   { start = IS.map (* (k+1)) (start cnfa)
   , transition = let tr = transition cnfa in IM.insert accept (const $ IS.singleton accept) $
-        IM.unions (map (\x -> makeLayer (k+1) x (all_next cnfa) tr) [0..k])
-  , all_next = fuzzAllNext (k+1) (all_next cnfa)
+        IM.unions (map (\x -> makeLayer (k+1) x (fuzz_next cnfa) tr) [0..k])
+  , fuzz_next = fuzzAllNext (k+1) (fuzz_next cnfa)
   }
 
 fuzzAllNext :: Int -> IM.IntMap IS.IntSet -> IM.IntMap IS.IntSet
 fuzzAllNext factor = IM.foldWithKey (fuzzSingleAllNext factor (factor - 1)) (IM.singleton accept (IS.singleton accept))
 
 fuzzSingleAllNext :: Int -> Int -> IM.Key -> IS.IntSet -> IM.IntMap IS.IntSet -> IM.IntMap IS.IntSet
-fuzzSingleAllNext factor (-1) _ _ = id
+fuzzSingleAllNext _ (-1) _ _ = id
+fuzzSingleAllNext _ _ (-1) _ = id
 fuzzSingleAllNext factor offset key next = if offset == factor - 1
     then IM.insert (factor * key + offset) (IS.map (\x -> factor * x + offset) next) . fuzzSingleAllNext factor (offset - 1) key next
     else IM.insert (factor * key + offset) (IS.map (\x -> factor * x + offset) next `IS.union` IS.map (\x -> factor * x + offset + 1) next) . fuzzSingleAllNext factor (offset - 1) key next
