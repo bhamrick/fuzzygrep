@@ -42,6 +42,7 @@ go pattern hdl = do
            else do
                 line <- hGetLine hdl
                 runRegex pattern line
+                hFlush stdout
                 go pattern hdl
 
 runRegex :: CompactNFA -> String -> IO ()

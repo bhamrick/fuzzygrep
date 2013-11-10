@@ -9,7 +9,7 @@ import qualified Data.IntMap as IM
 fuzz :: Int -> CompactNFA -> CompactNFA
 fuzz 0 cnfa = cnfa
 fuzz k cnfa = CompactNFA
-  { start = IS.map (* (k+1)) (start cnfa)
+  { start = IS.map (\x -> if x == -1 then -1 else x * (k+1)) (start cnfa)
   , transition = let tr = transition cnfa in IM.insert accept (const $ IS.singleton accept) $
         IM.unions (map (\x -> makeLayer (k+1) x (fuzz_next cnfa) tr) [0..k])
   , fuzz_next = fuzzAllNext (k+1) (fuzz_next cnfa)
