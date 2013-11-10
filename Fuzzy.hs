@@ -7,6 +7,7 @@ import qualified Data.IntSet as IS
 import qualified Data.IntMap as IM
 
 fuzz :: Int -> CompactNFA -> CompactNFA
+fuzz 0 cnfa = cnfa
 fuzz k cnfa = CompactNFA
   { start = IS.map (* (k+1)) (start cnfa)
   , transition = let tr = transition cnfa in IM.insert accept (const $ IS.singleton accept) $
